@@ -1,0 +1,153 @@
+---
+title: "rsfa"
+author: "Ivan Lebedev"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidymodels)
+library(aorsf)
+library(survival)
+library(survminer)
+library(SurvMetrics)
+library(riskRegression)
+library(survivalROC)
+set.seed(100)
+```
+
+```{r}
+df_surv_cl_full %>% 
+  select(-REF_landmark, -LOT, -SUBJID, -etime, -event) %>% 
+  filter(!is.na(ALIVE)) %>% 
+  filter(!is.na(futime))-> sa_cl
+```
+
+```{r}
+sa_cl %>% glimpse()
+```
+
+```{r}
+sa_cl %>% count(ALIVE)
+sa_cl %>% tbl_summary(by = ALIVE)
+sa_cl %>% 
+  select(where(is.factor)) %>% 
+  map(function(x) sum(is.na(x))/length(x))
+sa_cl %>% 
+  select(where(is.factor)) %>% 
+  map(table)
+```
+
+```{r}
+sa_cl <- sa_cl[sample(nrow(sa_cl)), ]
+split_train_test <- initial_split(sa_cl, strata = ALIVE, prop = 0.8)
+sa_cl_train <- split_train_test %>% training()
+sa_cl_test <- split_train_test %>% testing()
+```
+
+```{r}
+prepr1 <- 
+  recipe(ALIVE + futime ~., sa_cl_train) %>% 
+  step_impute_bag(all_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_nzv(all_predictors()) %>%
+  step_corr(all_numeric_predictors(), threshold = 0.7, method = "spearman") %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_downsample(ALIVE) %>% 
+  prep()
+tr_data <- bake(prepr1, new_data = NULL)
+```
+
+```{r}
+fit <- orsf(data = tr_data,
+            formula = Surv(futime, ALIVE) ~ .,
+            n_tree = 500,
+            tree_seeds = 1,
+            leaf_min_obs = 2,
+            importance = "permute",
+            oobag_pred_type = 'surv',
+            oobag_pred_horizon = 365.25,
+            oobag_eval_every = 1)
+fit
+
+plot(
+ x = seq(1, 500, by = 1),
+ y = fit$eval_oobag$stat_values, 
+ main = 'Out-of-bag C-statistic computed after each new tree is grown.',
+ xlab = 'Number of trees grown',
+ ylab = fit$eval_oobag$stat_type
+)
+```
+
+```{r}
+fit_up1 <- orsf_update(fit, n_tree = 50)
+plot(
+ x = seq(1, 50, by = 1),
+ y = fit_up1$eval_oobag$stat_values, 
+ main = 'Out-of-bag C-statistic computed after each new tree is grown.',
+ xlab = 'Number of trees grown',
+ ylab = fit_up1$eval_oobag$stat_type
+)
+fit_up1
+```
+
+```{r}
+vi_rsf <- orsf_vi_permute(fit_up1)
+vi_rsf <- as.data.frame(vi_rsf)
+rw <- row.names(vi_rsf)
+vi_rsf <- bind_cols(rw,vi_rsf)
+vi_rsf %>% 
+  rownames_to_column("Variable") %>% 
+  ggplot(aes(y = ...1, x = vi_rsf)) +
+  geom_point() +
+  xlab('Importance') +
+  ylab('Variable') +
+  labs(color = 'Variable importance') -> rsf_vi
+rsf_vi
+```
+
+```{r}
+test_data <- bake(prepr1, new_data = sa_cl_test)
+```
+
+```{r}
+fit_up2 <- orsf_update(fit_up1, data = test_data)
+fit_up2
+```
+
+```{r}
+all_data <- bake(prepr1, new_data = sa_cl)
+```
+
+```{r}
+fit_up3 <- orsf_update(fit_up1, data = all_data)
+fit_up3
+```
+
+```{r}
+pd_ref_tv <- orsf_pd_oob(fit_up3, 
+                         pred_spec = pred_spec_auto(REF),
+                         pred_horizon = seq(0, 800),
+                         pred_type = "surv")
+
+ggplot(pd_ref_tv) +
+  aes(x = pred_horizon, y = mean, color = REF) + 
+  geom_line() +
+  labs(x = 'Time since baseline',
+      y = 'Survival probability') +
+  theme_bw() -> rsf_sp
+rsf_sp
+```
+
+```{r}
+ggsave("rsf_sp.png", plot = rsf_sp, dpi = 600, device = "png")
+ggsave("rsf_vi.png", plot = rsf_vi, dpi = 600, device = "png")
+```
+
+
+
+
+
+
