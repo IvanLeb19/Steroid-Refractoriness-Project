@@ -1,5 +1,5 @@
 # The Retrospective Analysis of Multicenter Clinical Trial Data on Graft vs Host Disease in Patients Following Bone Marrow Transplantation
-Placeholder: Short description of the project.
+This project is a retrospective analysis of data from a multi-centre clinical trial designed to investigate graft versus host response (GvHD) in patients following bone marrow transplantation. The study aims to identify potential associations with glucocorticoid resistance, analyse the survival of patients with acute and chronic GvHD, and establish a predictive model for glucocorticoid resistance. Based on data from 343 patients, the project includes biostatistical analysis and the application of machine learning methods to assess the impact of various factors on transplant outcomes and to develop personalised treatment strategies to improve bone marrow transplant outcomes and prevent GvHD.
 
 ## Table of content
 
@@ -21,7 +21,7 @@ Placeholder: Short description of the project.
 
 ## Structure of repository
 
-There are four directories in repo.
+There are four directories in the repo.
 
 1. `raw_data`: the folder contains the data we had at the start point of analysis. You can reproduce our way of analysis (or do your own instead), using these datasets.
 
@@ -31,23 +31,79 @@ There are four directories in repo.
 
 4. `cooked_data`: transformed datasets for use in further analysis
 
-5. In main folder we can found docx file with specifications for source datasets and df_creator.rmd file that created main dataset and cooked datasets, and does EDA.
+5. In the main folder we can find a docx file with specifications for source datasets and df_creator.rmd file that created the main dataset and cooked datasets, and does EDA.
 
 ## Introduction
 
+Different blood and bone marrow disease treatment is a bone marrow transplantation. One of the main adverse effects of such treatment is graft vs host disease (GvHD). This adverse effect appears in 30-70% of patients with allogeneic transplantations. It may be acute (if the disease appears in the first 100 days after transplantation) or chronic (if it appears later). The mortality rate of GvHD is nearly 40% for the acute form and nearly 10% for the chronic one.
+
+One of the main strategies for GvHD treatment is using of glucocorticoids. It is the cheapest treatment with fewer adverse effects than more complicated therapy. Sometimes patients demonstrate refractory to glucocorticoids. It may lead to different consequences: more aggressive therapy, 
+
+
 ## Aims and objectives
 
-
+1. Searching the potential associations of glucocorticoid refractory.
+2. Survival analysis.
+3. Creating a predictive model for glucocorticoid refractory occurrence. 
 
 ## Data
 
+Data was provided by the Research Institute of Children Oncology, Hematology and Transplantology named after R.M. Gorbacheva.
+
+There were 18 ADAM-like xlsx files (10 source data files and 8 derivatives) which contained data about demography, preventive care, treatment, resistance to glucocorticoids, and other helpful information.
+
+More detailed information about the input data can be found in the [`GVHD_Specification.docx`](https://github.com/Asklepiad/GvHD/blob/main/GVHD_Specification.docx) file in this repository.
+
 ## Workflow
+
+The principal scheme of workflow is illustrated in Fig.1
+
+![Fig. 1 Principal scheme of workflow](https://github.com/Asklepiad/GvHD/blob/main/workflow_GvHD.jpg)
+
+1. Creating datasets from ADAM-like files. We created twelve long-form datasets for three levels: four for the treatment level (unit of observation -- one drug prescribtion), four for the disease level (unit of observation -- one diagnosis), four for the patient level (unit of observation -- one person), and ~~one dataset to rull them all~~. Four datasets for every level were common dataset, dataset with acute GVHD cases only, dataset with chronuc GVHD cases only and dataset with cross-syndrome (transitional stage between acute and chronic GVHD).
+
+2. Performing EDA, descriptive statistics and NA analysis.
+
+3. Survival analysis (rate mortality).
+
+4. ML (steroid resistance)
 
 ## EDA
 
-## Results
+No new insights were found after EDA, but we make sure our data have similar properties with other investigations in this field.
+As an example -- patients with a more severe gastrointestinal lesion at the time of diagnosis had a worse mortality rate. People with non-relative haplo-matched donors also have worse prognoses by survival and steroid resistance.
 
-## Discussions
+More interesting details and figures you can found [after paying for annual subscription](https://boosty.to/bioinf) or in the `df_creation.html` file in the "EDA" section. But subscription is a preferred option.
+
+### Survival analysis
+
+
+### ML
+
+> Boruta
+
+> Lasso
+
+> Random forest
+
+> Catboost
+
+We tried to implement categorial boosting to predict the fact of resistance. We used the MICE algorithm for imputing missing values, optuna tool for choosing the best hyperparameters, and the catboost itself for evaluating the analysis. The metric we will maximize in the process of training is sensitivity (also widely known by the alias "recall"). Our sensitivity on the test dataset was 0.22. More interesting details can be found in [`the appropriate file`](https://github.com/Asklepiad/GvHD/blob/main/ml/Forest_Gump.ipynb).
+
+Soft
++ Python 3.9.13
++ matplotlib==3.8.0
++ miceforest==5.7.0
++ nafig==1.0.1
++ optuna==3.5.0
++ pandas==1.5.3
++ sklearn==1.3.2
++ seaborn==0.12.2
++ numpy==1.24.2
+
+> HGBM
+
+## Results
 
 ## Literature
 
@@ -67,3 +123,14 @@ Placeholder: Uniformity of links
 
 > [7] Carreras E, Dufour C, Mohty M, Kröger N, editors. The EBMT Handbook: Hematopoietic Stem Cell Transplantation and Cellular Therapies [Internet]. 7th ed. Cham (CH): Springer; 2019. PMID: 32091673.
 
+## Authors
+
+Students:
+- Ivan Lebedev
+- Elizaveta Melnichuk
+- Bogdan Sotnikov
+- Iuliia Trifonova
+
+Curators:
+- Oleg Arnaut
+- Nikita Volkov
